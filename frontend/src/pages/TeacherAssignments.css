@@ -34,6 +34,32 @@
   margin-top: 0;
 }
 
+.teacher-assignment-details {
+  margin-top: 16px;
+  color: #cbd5e1;
+}
+
+.teacher-assignment-details summary {
+  cursor: pointer;
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+.teacher-assignment-config {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.teacher-assignment-config span {
+  padding: 8px 10px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #020617;
+  color: #e2e8f0;
+}
+
 .teacher-assignment-delete {
   margin-top: 18px;
   min-height: 40px;

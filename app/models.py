@@ -87,6 +87,42 @@ class Assignment(Base):
         nullable=False
     )
 
+    evaluation_profile = Column(
+        String,
+        default="factual",
+        nullable=False
+    )
+
+    semantic_weight = Column(
+        Float
+    )
+
+    keyword_weight = Column(
+        Float
+    )
+
+    threshold_5 = Column(
+        Float
+    )
+
+    threshold_4 = Column(
+        Float
+    )
+
+    threshold_3 = Column(
+        Float
+    )
+
+    negation_penalty_enabled = Column(
+        Boolean,
+        default=True
+    )
+
+    keyword_stuffing_penalty_enabled = Column(
+        Boolean,
+        default=True
+    )
+
     teacher = relationship(
         "User",
         back_populates="assignments"
@@ -160,11 +196,39 @@ class Result(Base):
         Float
     )
 
+    raw_total_score = Column(
+        Float
+    )
+
+    corrected_score = Column(
+        Float
+    )
+
     grade = Column(
         Integer
     )
 
     feedback = Column(
+        Text
+    )
+
+    found_keywords = Column(
+        Text
+    )
+
+    missing_keywords = Column(
+        Text
+    )
+
+    applied_penalties = Column(
+        Text
+    )
+
+    evaluation_profile = Column(
+        String
+    )
+
+    evaluation_config = Column(
         Text
     )
 

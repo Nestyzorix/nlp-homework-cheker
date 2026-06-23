@@ -1,3 +1,5 @@
+import json
+
 from fastapi import FastAPI
 from fastapi import Depends
 from fastapi import HTTPException
@@ -39,13 +41,8 @@ from app.schemas import (
 )
 
 from app.services.nlp_service import (
-    semantic_similarity,
-    keyword_score,
-    final_score,
-    generate_feedback,
-    grade_from_score,
-    apply_negation_penalty,
-    apply_keyword_stuffing_penalty
+    evaluate_answer,
+    get_evaluation_config
 )
 
 from app.auth import (
@@ -122,6 +119,91 @@ def ensure_database_columns():
                 UPDATE assignments
                 SET is_visible = TRUE
                 WHERE is_visible IS NULL
+                """
+            )
+        )
+
+        connection.execute(
+            text(
+                """
+                ALTER TABLE assignments
+                ADD COLUMN IF NOT EXISTS evaluation_profile
+                VARCHAR DEFAULT 'factual' NOT NULL
+                """
+            )
+        )
+
+        for column_name in [
+            "semantic_weight",
+            "keyword_weight",
+            "threshold_5",
+            "threshold_4",
+            "threshold_3",
+        ]:
+
+            connection.execute(
+                text(
+                    f"""
+                    ALTER TABLE assignments
+                    ADD COLUMN IF NOT EXISTS {column_name}
+                    DOUBLE PRECISION
+                    """
+                )
+            )
+
+        for column_name in [
+            "negation_penalty_enabled",
+            "keyword_stuffing_penalty_enabled",
+        ]:
+
+            connection.execute(
+                text(
+                    f"""
+                    ALTER TABLE assignments
+                    ADD COLUMN IF NOT EXISTS {column_name}
+                    BOOLEAN DEFAULT TRUE
+                    """
+                )
+            )
+
+        for column_name in [
+            "raw_total_score",
+            "corrected_score",
+        ]:
+
+            connection.execute(
+                text(
+                    f"""
+                    ALTER TABLE results
+                    ADD COLUMN IF NOT EXISTS {column_name}
+                    DOUBLE PRECISION
+                    """
+                )
+            )
+
+        for column_name in [
+            "found_keywords",
+            "missing_keywords",
+            "applied_penalties",
+            "evaluation_config",
+        ]:
+
+            connection.execute(
+                text(
+                    f"""
+                    ALTER TABLE results
+                    ADD COLUMN IF NOT EXISTS {column_name}
+                    TEXT
+                    """
+                )
+            )
+
+        connection.execute(
+            text(
+                """
+                ALTER TABLE results
+                ADD COLUMN IF NOT EXISTS evaluation_profile
+                VARCHAR
                 """
             )
         )
@@ -247,63 +329,116 @@ def login(
 # NLP CHECK
 # =========================
 
-@app.post("/check")
-def check_answer(data: CheckRequest):
-
-    semantic = semantic_similarity(
-        data.student_answer,
-        data.reference_answer
-    )
-
-    keyword = keyword_score(
-        data.student_answer,
-        data.keywords
-    )
-
-    final = final_score(
-        semantic,
-        keyword
-    )
-
-    final = apply_negation_penalty(
-        final,
-        data.reference_answer,
-        data.student_answer
-    )
-
-    final = apply_keyword_stuffing_penalty(
-        final,
-        data.student_answer,
-        data.keywords,
-        data.reference_answer
-    )
-
-    grade = grade_from_score(final)
-
-    feedback = generate_feedback(
-        data.student_answer,
-        data.keywords,
-        final,
-        data.reference_answer
-    )
+def assignment_custom_config(data):
 
     return {
-
-        "semantic_score":
-            semantic,
-
-        "keyword_score":
-            keyword,
-
-        "final_score":
-            final,
-
-        "grade":
-            grade,
-
-        "feedback":
-            feedback
+        "semantic_weight": data.semantic_weight,
+        "keyword_weight": data.keyword_weight,
+        "threshold_5": data.threshold_5,
+        "threshold_4": data.threshold_4,
+        "threshold_3": data.threshold_3,
+        "negation_penalty_enabled": data.negation_penalty_enabled,
+        "keyword_stuffing_penalty_enabled":
+            data.keyword_stuffing_penalty_enabled,
     }
+
+
+def assignment_config(assignment: Assignment):
+
+    return {
+        "semantic_weight": assignment.semantic_weight,
+        "keyword_weight": assignment.keyword_weight,
+        "threshold_5": assignment.threshold_5,
+        "threshold_4": assignment.threshold_4,
+        "threshold_3": assignment.threshold_3,
+        "negation_penalty_enabled":
+            assignment.negation_penalty_enabled,
+        "keyword_stuffing_penalty_enabled":
+            assignment.keyword_stuffing_penalty_enabled,
+    }
+
+
+def assignment_keywords(assignment: Assignment):
+
+    return [
+        keyword.strip()
+        for keyword in assignment.keywords.split(",")
+        if keyword.strip()
+    ]
+
+
+def result_list_to_json(items):
+
+    return json.dumps(
+        items,
+        ensure_ascii=False
+    )
+
+
+def result_dict_to_json(data):
+
+    return json.dumps(
+        data,
+        ensure_ascii=False
+    )
+
+
+def json_to_list(value):
+
+    if not value:
+
+        return []
+
+    try:
+
+        return json.loads(value)
+
+    except json.JSONDecodeError:
+
+        return []
+
+
+def json_to_dict(value):
+
+    if not value:
+
+        return None
+
+    try:
+
+        return json.loads(value)
+
+    except json.JSONDecodeError:
+
+        return None
+
+
+@app.post("/check")
+@app.post("/evaluation/check")
+def check_answer(data: CheckRequest):
+
+    try:
+
+        custom_config = (
+            data.custom_config.model_dump()
+            if data.custom_config
+            else None
+        )
+
+        return evaluate_answer(
+            data.student_answer,
+            data.reference_answer,
+            data.keywords,
+            data.evaluation_profile,
+            custom_config
+        )
+
+    except ValueError as exc:
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc)
+        ) from exc
 
 
 # =========================
@@ -322,6 +457,20 @@ def create_assignment(
     )
 ):
 
+    try:
+
+        config = get_evaluation_config(
+            data.evaluation_profile,
+            assignment_custom_config(data)
+        )
+
+    except ValueError as exc:
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc)
+        ) from exc
+
     assignment = Assignment(
 
         question=data.question,
@@ -334,7 +483,25 @@ def create_assignment(
 
         teacher_id=current_user.id,
 
-        is_visible=True
+        is_visible=True,
+
+        evaluation_profile=data.evaluation_profile or "factual",
+
+        semantic_weight=config.semantic_weight,
+
+        keyword_weight=config.keyword_weight,
+
+        threshold_5=config.threshold_5,
+
+        threshold_4=config.threshold_4,
+
+        threshold_3=config.threshold_3,
+
+        negation_penalty_enabled=
+            config.negation_penalty_enabled,
+
+        keyword_stuffing_penalty_enabled=
+            config.keyword_stuffing_penalty_enabled
     )
 
     db.add(assignment)
@@ -479,58 +646,60 @@ def submit_answer(
 
     db.refresh(submission)
 
-    keywords = assignment.keywords.split(", ")
+    keywords = assignment_keywords(assignment)
 
-    semantic = semantic_similarity(
-        data.student_answer,
-        assignment.reference_answer
-    )
+    try:
 
-    keyword = keyword_score(
-        data.student_answer,
-        keywords
-    )
+        evaluation = evaluate_answer(
+            data.student_answer,
+            assignment.reference_answer,
+            keywords,
+            assignment.evaluation_profile,
+            assignment_config(assignment)
+        )
 
-    final = final_score(
-        semantic,
-        keyword
-    )
+    except ValueError as exc:
 
-    final = apply_negation_penalty(
-        final,
-        assignment.reference_answer,
-        data.student_answer
-    )
-
-    final = apply_keyword_stuffing_penalty(
-        final,
-        data.student_answer,
-        keywords,
-        assignment.reference_answer
-    )
-
-    grade = grade_from_score(final)
-
-    feedback = generate_feedback(
-        data.student_answer,
-        keywords,
-        final,
-        assignment.reference_answer
-    )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc)
+        ) from exc
 
     result = Result(
 
         submission_id=submission.id,
 
-        semantic_score=semantic,
+        semantic_score=evaluation["semantic_score"],
 
-        keyword_score=keyword,
+        keyword_score=evaluation["keyword_score"],
 
-        final_score=final,
+        raw_total_score=evaluation["raw_total_score"],
 
-        grade=grade,
+        corrected_score=evaluation["corrected_score"],
 
-        feedback=feedback
+        final_score=evaluation["final_score"],
+
+        grade=evaluation["grade"],
+
+        feedback=evaluation["feedback"],
+
+        found_keywords=result_list_to_json(
+            evaluation["found_keywords"]
+        ),
+
+        missing_keywords=result_list_to_json(
+            evaluation["missing_keywords"]
+        ),
+
+        applied_penalties=result_list_to_json(
+            evaluation["applied_penalties"]
+        ),
+
+        evaluation_profile=evaluation["evaluation_profile"],
+
+        evaluation_config=result_dict_to_json(
+            evaluation["evaluation_config"]
+        )
     )
 
     db.add(result)
@@ -539,7 +708,7 @@ def submit_answer(
 
     db.refresh(result)
 
-    return result
+    return evaluation
 
 
 @app.get(
@@ -603,9 +772,39 @@ def result_to_detail(result: Result):
         ),
         "semantic_score": result.semantic_score,
         "keyword_score": result.keyword_score,
+        "raw_total_score": (
+            result.raw_total_score
+            if result.raw_total_score is not None
+            else result.final_score
+        ),
+        "corrected_score": (
+            result.corrected_score
+            if result.corrected_score is not None
+            else result.final_score
+        ),
         "final_score": result.final_score,
         "grade": result.grade,
-        "feedback": result.feedback
+        "feedback": result.feedback,
+        "found_keywords": json_to_list(
+            result.found_keywords
+        ),
+        "missing_keywords": json_to_list(
+            result.missing_keywords
+        ),
+        "applied_penalties": json_to_list(
+            result.applied_penalties
+        ),
+        "evaluation_profile": (
+            result.evaluation_profile
+            or (
+                assignment.evaluation_profile
+                if assignment
+                else "factual"
+            )
+        ),
+        "evaluation_config": json_to_dict(
+            result.evaluation_config
+        )
     }
 
 
@@ -622,11 +821,17 @@ def get_results(
 
     results = db.query(
         Result
+    ).join(
+        Submission
+    ).join(
+        Assignment
     ).options(
         joinedload(Result.submission)
         .joinedload(Submission.assignment),
         joinedload(Result.submission)
         .joinedload(Submission.student)
+    ).filter(
+        Assignment.teacher_id == current_user.id
     ).all()
 
     return [

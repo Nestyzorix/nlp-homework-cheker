@@ -7,6 +7,13 @@ import api from "../utils/api";
 
 import "./TeacherAnswers.css";
 
+const PROFILE_LABELS = {
+    definition: "Определение понятия",
+    process: "Описание процесса",
+    factual: "Фактологическое объяснение",
+    custom: "Пользовательская настройка"
+};
+
 function TeacherAnswers() {
 
     const [
@@ -99,6 +106,64 @@ function TeacherAnswers() {
                                     {result.final_score}
                                 </span>
                             </div>
+
+                            <details className="teacher-answer-details">
+                                <summary>
+                                    Подробности проверки
+                                </summary>
+
+                                <div className="teacher-answer-details-grid">
+                                    <span>
+                                        Профиль:{" "}
+                                        {
+                                            PROFILE_LABELS[
+                                                result.evaluation_profile
+                                            ] || result.evaluation_profile
+                                        }
+                                    </span>
+
+                                    <span>
+                                        Исходный score:{" "}
+                                        {result.raw_total_score}
+                                    </span>
+
+                                    <span>
+                                        Скорректированный score:{" "}
+                                        {result.corrected_score}
+                                    </span>
+
+                                    <span>
+                                        Найденные ключевые элементы:{" "}
+                                        {
+                                            result.found_keywords?.length
+                                                ? result.found_keywords.join(", ")
+                                                : "нет"
+                                        }
+                                    </span>
+
+                                    <span>
+                                        Отсутствующие ключевые элементы:{" "}
+                                        {
+                                            result.missing_keywords?.length
+                                                ? result.missing_keywords.join(", ")
+                                                : "нет"
+                                        }
+                                    </span>
+
+                                    <span>
+                                        Примененные штрафы:{" "}
+                                        {
+                                            result.applied_penalties?.length
+                                                ? result.applied_penalties
+                                                    .map((penalty) =>
+                                                        penalty.reason
+                                                    )
+                                                    .join("; ")
+                                                : "нет"
+                                        }
+                                    </span>
+                                </div>
+                            </details>
 
                             <p>
                                 <b>Отзыв:</b> {result.feedback}

@@ -6,3 +6,6 @@ __pycache__/
 .env
 .venv/
 *.db
+evaluation_results/
+external_datasets/
+external_evaluation_results/

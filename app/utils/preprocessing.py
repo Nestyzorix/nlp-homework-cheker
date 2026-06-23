@@ -70,7 +70,7 @@ def preprocess_text(text):
 
     text = re.sub(
         r"[^а-яёa-z0-9\s]",
-        "",
+        " ",
         text
     )
 

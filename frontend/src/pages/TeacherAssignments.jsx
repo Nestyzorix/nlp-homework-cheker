@@ -7,6 +7,13 @@ import api from "../utils/api";
 
 import "./TeacherAssignments.css";
 
+const PROFILE_LABELS = {
+    definition: "Определение понятия",
+    process: "Описание процесса",
+    factual: "Фактологическое объяснение",
+    custom: "Пользовательская настройка"
+};
+
 function TeacherAssignments() {
 
     const [
@@ -80,6 +87,59 @@ function TeacherAssignments() {
                                 <b>Ключевые слова:</b>{" "}
                                 {assignment.keywords || "Не указаны"}
                             </p>
+
+                            <details className="teacher-assignment-details">
+                                <summary>
+                                    Параметры проверки
+                                </summary>
+
+                                <div className="teacher-assignment-config">
+                                    <span>
+                                        Профиль:{" "}
+                                        {
+                                            PROFILE_LABELS[
+                                                assignment.evaluation_profile
+                                            ] || assignment.evaluation_profile
+                                        }
+                                    </span>
+
+                                    <span>
+                                        Вес семантики:{" "}
+                                        {assignment.semantic_weight}
+                                    </span>
+
+                                    <span>
+                                        Вес ключевых слов:{" "}
+                                        {assignment.keyword_weight}
+                                    </span>
+
+                                    <span>
+                                        Пороги: 5 от{" "}
+                                        {assignment.threshold_5}, 4 от{" "}
+                                        {assignment.threshold_4}, 3 от{" "}
+                                        {assignment.threshold_3}
+                                    </span>
+
+                                    <span>
+                                        Штраф за отрицание:{" "}
+                                        {
+                                            assignment.negation_penalty_enabled
+                                                ? "включен"
+                                                : "отключен"
+                                        }
+                                    </span>
+
+                                    <span>
+                                        Штраф за перечисление ключевых слов:{" "}
+                                        {
+                                            assignment
+                                                .keyword_stuffing_penalty_enabled
+                                                ? "включен"
+                                                : "отключен"
+                                        }
+                                    </span>
+                                </div>
+                            </details>
 
                             <button
                                 type="button"

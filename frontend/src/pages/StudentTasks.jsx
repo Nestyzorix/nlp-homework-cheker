@@ -7,6 +7,13 @@ import api from "../utils/api";
 
 import "./StudentTasks.css";
 
+const PROFILE_LABELS = {
+    definition: "Определение понятия",
+    process: "Описание процесса",
+    factual: "Фактологическое объяснение",
+    custom: "Пользовательская настройка"
+};
+
 function StudentTasks() {
 
     const [
@@ -133,6 +140,51 @@ function StudentTasks() {
                         <p>
                             Отзыв: {result.feedback}
                         </p>
+
+                        <details className="student-result-details">
+                            <summary>
+                                Подробности проверки
+                            </summary>
+
+                            <div>
+                                <span>
+                                    Профиль:{" "}
+                                    {
+                                        PROFILE_LABELS[
+                                            result.evaluation_profile
+                                        ] || result.evaluation_profile
+                                    }
+                                </span>
+
+                                <span>
+                                    Семантическая близость:{" "}
+                                    {result.semantic_score}
+                                </span>
+
+                                <span>
+                                    Полнота ключевых элементов:{" "}
+                                    {result.keyword_score}
+                                </span>
+
+                                <span>
+                                    Скорректированный score:{" "}
+                                    {result.corrected_score}
+                                </span>
+
+                                <span>
+                                    Штрафы:{" "}
+                                    {
+                                        result.applied_penalties?.length
+                                            ? result.applied_penalties
+                                                .map((penalty) =>
+                                                    penalty.reason
+                                                )
+                                                .join("; ")
+                                            : "нет"
+                                    }
+                                </span>
+                            </div>
+                        </details>
 
                     </section>
                 )
