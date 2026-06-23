@@ -1,0 +1,44 @@
+.student-grades {
+  width: 100%;
+  text-align: left;
+}
+
+.student-grades h1 {
+  text-align: center;
+}
+
+.student-grades-empty {
+  color: #cbd5e1;
+  text-align: center;
+}
+
+.student-grades-list {
+  display: grid;
+  gap: 16px;
+}
+
+.student-grade-card {
+  padding: 22px;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  background: #111827;
+  color: #f8fafc;
+}
+
+.student-grade-card p {
+  margin-top: 14px;
+  overflow-wrap: anywhere;
+}
+
+.student-grade-header {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.student-grade-header span {
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 700;
+}

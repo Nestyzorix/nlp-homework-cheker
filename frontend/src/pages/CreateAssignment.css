@@ -1,0 +1,72 @@
+.create-assignment {
+  width: min(100%, 680px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  text-align: left;
+}
+
+.create-assignment h1 {
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.create-assignment label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+.create-assignment textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  resize: vertical;
+  background: #020617;
+  color: #f8fafc;
+  font: inherit;
+}
+
+.create-assignment label:nth-of-type(2) textarea {
+  min-height: 180px;
+}
+
+.create-assignment label:nth-of-type(3) textarea {
+  min-height: 120px;
+}
+
+.create-assignment textarea:focus {
+  border-color: #38bdf8;
+  outline: 3px solid rgba(56, 189, 248, 0.2);
+}
+
+.create-assignment button {
+  align-self: flex-end;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.create-assignment button:hover,
+.create-assignment button:focus-visible {
+  background: #1d4ed8;
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  .create-assignment button {
+    width: 100%;
+  }
+}
